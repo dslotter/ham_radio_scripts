@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# BASH script for quickly uploading new QSLs to:
+# ARRL Logbook of the World, eQSL.cc and ClubLog.org
+#
+# Copyright 2020, Dave Slotter, W3DJS
+#
+
+
+CALLSIGN="<YOUR_CALLSIGN>"
+
+LOTW_LOCATION="<YOUR_LOTW_STATION_LOCATION_FOR_CALLSIGN>"
+
+EQSL_USER="${CALLSIGN}"
+EQSL_PSWD="<YOUR_EQSL.CC_PASSWORD>"
+
+CLUBLOG_EMAIL="<YOUR_CLUBLOG_EMAIL>"
+CLUBLOG_PSWD="<YOUR_CLUBLOG_PASSWORD"
+CLUBLOG_API="<YOUR_CLUBLOG_API_KEY>"
+
+ADIF_FILE="${HOME}/.local/share/WSJT-X/wsjtx_log.adi"
+
+#
+# Read https://clublog.freshdesk.com/support/solutions/articles/54910-api-keys
+# on how to get a ClubLog API Key
+#
+
+if [ ! -x /usr/bin/curl ]; then
+  echo "CURL is required. Please install it."
+  exit 1
+fi
+
+if [ ! -x /usr/bin/espeak ]; then
+  echo "espeak is required. Please install it."
+  exit 1
+fi
+
+if [ ! -x /usr/bin/notify-send ]; then
+  echo "notify-send is required. Please install it."
+  exit 1
+fi
+
+if [ ! -f "${ADIF_FILE}" ]; then
+  echo "Cannot locate ADIF Logfile: ${ADIF_FILE}."
+  exit 1
+fi
+
+TMPFILE=$(mktemp /tmp/adif_log_delta_.XXXXXX.ADIF)
+
+trap 'rm ${TMPFILE}' SIGTERM
+
+# Get current highwater mark
+ADIF_LOG_NEW_HIGHWATER=$(wc -l ${ADIF_FILE} | cut -d ' ' -f1 )
+
+# Get prior highwater mark
+ADIF_LOG_HIGHWATER=$(cat ${HOME}/.adif_log_old_highwater)
+
+NEW_LOG_LINES=$(( ${ADIF_LOG_NEW_HIGHWATER} - ${ADIF_LOG_HIGHWATER} ))
+if (( ${NEW_LOG_LINES} > 0 )); then
+  tail -n ${NEW_LOG_LINES} ${ADIF_FILE} > ${TMPFILE}
+
+  # Upload to eQSL.cc
+  echo -e "\nUploading to eQSL..."
+  curl -s -F "EQSL_USER=${EQSL_USER}" -F "EQSL_PSWD=${EQSL_PSWD}" -F "Filename=@${TMPFILE}" https://www.eQSL.cc/qslcard/ImportADIF.cfm
+
+  # Upload to ClubLog
+  echo -e "\n\nUploading to ClubLog..."
+  curl -s -F "email=${CLUBLOG_EMAIL}" -F "password=${CLUBLOG_PSWD}" -F "callsign=${CALLSIGN}" -F "api=${CLUBLOG_API}" -F "file=@${TMPFILE}" https://clublog.org/putlogs.php
+
+  echo -e "\n\nUploading to Logbook of the World..."
+  /usr/local/bin/tqsl --quiet --batch --nodate --location="${LOTW_LOCATION}" --upload --batch ${TMPFILE}
+  if (( $? == 0 )); then
+    espeak -s 150 -v en-us "Logbook of the world upload of, ${NEW_LOG_LINES}, cue-soes successful.!" 2> /dev/null &
+    notify-send -i /usr/share/pixmaps/trustedqsl.png -t 60000 "LotW upload of ${NEW_LOG_LINES} QSO(s) successful" &
+    # Write out new highwater mark:
+    echo ${ADIF_LOG_NEW_HIGHWATER} > ${HOME}/.adif_log_old_highwater
+    rm "$TMPFILE"
+  fi
+  else
+    espeak -s 150 -v en-us "Nothing to upload to Logbook of the world.!" 2> /dev/null &
+    notify-send -i /usr/share/pixmaps/trustedqsl.png -t 60000 "Nothing to upload to LotW." &
+fi
+

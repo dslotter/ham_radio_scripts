@@ -1,0 +1,60 @@
+#!/bin/bash
+#
+# Script to update WSJT-X on Raspberry Pi
+#
+# Copyright 2020, Dave Slotter, W3DJS
+#
+
+DOWNLOAD_VERSION=2.3.0-rc2
+
+DIRECTORY=/home/pi/hamradio
+PROGRAM=wsjtx
+
+# Ensure needed components are present
+echo -e "\nDownloading any missing required packages..."
+sudo apt -y install libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libgfortran3
+
+echo -e "\nUpdating $PROGRAM..."
+INSTALLED_VERSION=`dpkg -l ${PROGRAM} | grep ${PROGRAM} | awk '{print $3}'`
+echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
+
+if [ "$DOWNLOAD_VERSION" == "" ]; then
+  DOWNLOAD_VERSION="0.0.0"
+fi
+
+if [ "$INSTALLED_VERSION" == "$DOWNLOAD_VERSION" ]; then
+  echo "Installed ${PROGRAM} version is CURRENT."
+  exit
+fi
+
+if ! cd $DIRECTORY; then
+  echo "cd ${DIRECTORY} failed."
+  exit
+fi
+
+if ! wget --no-check-certificate https://physics.princeton.edu/pulsar/K1JT/${PROGRAM}_${DOWNLOAD_VERSION}_armhf.deb; then
+  echo "Download of ${PROGRAM}_${DOWNLOAD_VERSION}_armhf.deb failed."
+  exit
+fi
+
+if sudo dpkg -i ${PROGRAM}_${DOWNLOAD_VERSION}_armhf.deb; then
+  echo "Installing package ${PROGRAM}_${DOWNLOAD_VERSION}_armhf.deb failed."
+  exit
+fi
+
+if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/share/applications/wsjtx.desktop; then
+  echo "sed failed to fix wsjtx.desktop."
+  exit
+fi
+
+if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/share/applications/message_aggregator.desktop; then
+  echo "sed failed to fix .message_aggregator.desktop."
+  exit
+fi
+
+if ! rm ${PROGRAM}_${DOWNLOAD_VERSION}_armhf.deb; then
+  echo "Removing download package for ${PROGRAM}_${DOWNLOAD_VERSION}_armhf.deb failed."
+  exit
+fi
+
+echo "Upgrade of ${PROGRAM}_${DOWNLOAD_VERSION} completed successfully."

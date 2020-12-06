@@ -1,0 +1,111 @@
+#!/bin/bash
+#
+# Script to update WSJT-X on Raspberry Pi
+#
+# Copyright 2020, Dave Slotter, W3DJS
+#
+
+DOWNLOAD_VERSION=2.3.0-rc2
+
+DIRECTORY=/home/pi/hamradio
+PROGRAM=wsjtx
+
+# Ensure needed components are present
+echo -e "\nDownloading any missing required packages..."
+sudo apt -y install libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3
+
+echo -e "\nUpdating $PROGRAM..."
+INSTALLED_VERSION=`dpkg -l ${PROGRAM} | grep ${PROGRAM} | awk '{print $3}'`
+echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
+
+if [ "$DOWNLOAD_VERSION" == "" ]; then
+  DOWNLOAD_VERSION="0.0.0"
+fi
+
+if [ "$INSTALLED_VERSION" == "$DOWNLOAD_VERSION" ]; then
+  echo "Installed ${PROGRAM} version is CURRENT."
+  exit
+fi
+
+if ! cd $DIRECTORY; then
+  echo "cd ${DIRECTORY} failed."
+  exit
+fi
+
+if ! wget --no-check-certificate https://physics.princeton.edu/pulsar/K1JT/${PROGRAM}-${DOWNLOAD_VERSION}.tgz; then
+  echo "Download of ${PROGRAM}_${DOWNLOAD_VERSION}.tgz failed."
+  exit
+fi
+
+if ! tar -zxf ${PROGRAM}-${DOWNLOAD_VERSION}.tgz; then
+  echo "Decompressing archive ${PROGRAM}-${DOWNLOAD_VERSION}.tgz failed."
+  exit
+fi
+
+if ! cd ${PROGRAM}-${DOWNLOAD_VERSION}/src; then
+  echo "cd ${PROGRAM}-${DOWNLOAD_VERSION}/src failed."
+  exit
+fi
+
+if ! tar -zxf ${PROGRAM}.tgz; then
+  echo "Decompressing archive ${PROGRAM}.tgz failed."
+  exit
+fi
+
+if ! cd ${PROGRAM}; then
+  echo "cd ${PROGRAM} failed."
+  exit
+fi
+
+if ! mkdir build; then
+  echo "mkdir build failed."
+  exit
+fi
+
+if ! cd build; then
+  echo "cd build failed."
+  exit
+fi
+
+if ! cmake -DWSJT_SKIP_MANPAGES=ON -DWSJT_GENERATE_DOCS=OFF ..; then
+  echo "Generate cmake makefiles failed."
+  exit
+fi
+
+if ! cmake --build . ; then
+  echo "cmake build failed."
+  exit
+fi
+
+if ! sudo cmake --build . --target install ; then
+  echo "cmake install failed."
+  exit
+fi
+
+if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/local/share/applications/wsjtx.desktop; then
+  echo "sed failed to fix wsjtx.desktop."
+  exit
+fi
+
+if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/local/share/applications/message_aggregator.desktop; then
+  echo "sed failed to fix .message_aggregator.desktop."
+  exit
+fi
+
+if ! cd $DIRECTORY; then
+  echo "cd ${DIRECTORY} failed."
+  exit
+fi
+
+if ! rm -fr ${PROGRAM}-${DOWNLOAD_VERSION}; then
+  echo "Removing source directory for ${PROGRAM}-${DOWNLOAD_VERSION} failed."
+  exit
+fi
+
+if ! rm ${PROGRAM}-${DOWNLOAD_VERSION}.tgz; then
+  echo "Removing download archive for ${PROGRAM}-${DOWNLOAD_VERSION}.tgz failed."
+  exit
+fi
+
+echo "Upgrade of ${PROGRAM}_${DOWNLOAD_VERSION} completed successfully."
+

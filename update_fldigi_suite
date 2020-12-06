@@ -1,0 +1,92 @@
+#!/bin/bash
+#
+# Script to update FLDIGI suite
+#
+# Copyright 2020, Dave Slotter, W3DJS
+#
+
+DIRECTORY=/home/pi/hamradio
+FLDIGI_APPS=("flrig" "fldigi" "flaa" "flamp" "flcluster" "fllog" "flmsg" "flnet" "flwkey" "flwrap")
+export CXXFLAGS="-O2 -march=native -mtune=native"
+export CFLAGS="-O2 -march=native -mtune=native"
+
+# Ensure needed components are present
+echo -e "\nDownloading any missing required packages..."
+sudo apt -y install build-essential libfltk1.3-dev libsamplerate0-dev portaudio19-dev libsndfile1-dev libxft-dev libxinerama-dev libxcursor-dev libusb-1.0.0-dev libpulse-dev pavucontrol
+
+for PROGRAM in "${FLDIGI_APPS[@]}"
+do
+  echo -e "\nUpdating $PROGRAM..."
+  INSTALLED_VERSION=`${PROGRAM} --version | head -n 1 | awk '{print $2}'`
+  echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
+
+  echo "Getting current version from Internet..."
+  CURRENT_VERSION=`curl --silent "http://www.w1hkj.com/files/${PROGRAM}/" | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | uniq`
+  if [ "$CURRENT_VERSION" == "" ]; then
+    echo "Version check of ${PROGRAM} failed."
+    continue
+  fi
+
+  if [ "$INSTALLED_VERSION" == "$CURRENT_VERSION" ]; then
+    echo "Installed ${PROGRAM} version is CURRENT."
+    continue
+  fi
+  echo "Installed ${PROGRAM} version is ${CURRENT_VERSION}."
+
+  if ! cd $DIRECTORY; then
+    echo "cd ${DIRECTORY} failed."
+    exit
+  fi
+
+  if ! wget http://www.w1hkj.com/files/${PROGRAM}/${PROGRAM}-${CURRENT_VERSION}.tar.gz; then
+    echo "Download of ${PROGRAM}-${CURRENT_VERSION} failed."
+    continue
+  fi
+
+  if ! tar -zxf ${PROGRAM}-${CURRENT_VERSION}.tar.gz; then
+    echo "Decompressing archive ${PROGRAM}-${CURRENT_VERSION}.tar.gz failed."
+    continue
+  fi
+
+  if ! cd ${PROGRAM}-${CURRENT_VERSION}; then
+    echo "cd ${PROGRAM}-${CURRENT_VERSION} failed."
+    continue
+  fi
+
+  if ! ./configure; then
+    echo "Configure of ${PROGRAM}-${CURRENT_VERSION} failed."
+    continue
+  fi
+
+  if ! make; then
+    echo "Build of ${PROGRAM}-${CURRENT_VERSION} failed."
+    continue
+  fi
+
+  if ! sudo make install; then
+    echo "Install of ${PROGRAM}-${CURRENT_VERSION} failed."
+    continue
+  fi
+
+  if ! sudo sed -i 's/^Categories=Network;HamRadio;/Categories=HamRadio Fldigi/g' "/usr/local/share/applications/${PROGRAM}.desktop"; then
+    echo "sed failed to fix ${PROGRAM}.desktop."
+    continue
+  fi
+
+  if ! cd $DIRECTORY; then
+    echo "cd ${DIRECTORY} failed."
+    continue
+  fi
+
+  if ! rm -fr ${PROGRAM}-${CURRENT_VERSION}; then
+    echo "Removing source directory for ${PROGRAM}-${CURRENT_VERSION} failed."
+    continue
+  fi
+
+  if ! rm ${PROGRAM}-${CURRENT_VERSION}.tar.gz; then
+    echo "Removing download archive for ${PROGRAM}-${CURRENT_VERSION} failed."
+    continue
+  fi
+
+  echo "Upgrade of ${PROGRAM}-${CURRENT_VERSION} completed successfully."
+done
