@@ -1,21 +1,56 @@
 #!/bin/bash
 #
-# Script to update WSJT-X on Raspberry Pi
+# Script to update WSJT-X on Raspberry Pi or Ubuntu
 #
 # Copyright 2020, Dave Slotter, W3DJS
 #
 
-DOWNLOAD_VERSION=2.3.0-rc2
-
-DIRECTORY=/home/pi/hamradio
+DOWNLOAD_VERSION=2.3.0-rc3
+DIRECTORY=${HOME}/hamradio
 PROGRAM=wsjtx
+export CXXFLAGS="-O2 -march=native -mtune=native"
+export CFLAGS="-O2 -march=native -mtune=native"
+export MAKEFLAGS="-j `grep CPU /proc/cpuinfo | wc -l`"
 
-# Ensure needed components are present
+if [ ! -x /usr/bin/wget ]; then
+  echo "wget is not installed; automatically installing wget..."
+  sudo apt -y install wget
+fi
+
+if [ ! -d "${DIRECTORY}" ]; then
+  echo "${DIRECTORY} does not exist; creating it..."
+  mkdir -p "${DIRECTORY}"
+fi
+
+# Ensure required components are present
 echo -e "\nDownloading any missing required packages..."
-sudo apt -y install libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3
+linux_distribution=`lsb_release -si`
+linux_version=`lsb_release -sr | awk -F \. {'print $1'}`
+if [ $linux_distribution == 'Ubuntu' ]; then
+  if [ $linux_version -lt 20 ]; then
+  {
+      echo "Ubuntu pre-version 20 detected..."
+      # Ubuntu earlier than 20.04:
+      sudo apt -y install build-essential cmake gfortran libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev
+  }
+  else
+  {
+      echo "Ubuntu version 20 or later detected..."
+      # Ubuntu earlier than 20.04:
+      # Ubuntu 20.04:
+      sudo apt -y install build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev
+  }
+  fi
+fi
 
-echo -e "\nUpdating $PROGRAM..."
-INSTALLED_VERSION=`dpkg -l ${PROGRAM} | grep ${PROGRAM} | awk '{print $3}'`
+# Determine WSJT-X application version
+wsjtx_app_version=`which wsjtx_app_version`
+if [ $wsjtx_app_version != "" ]; then
+  INSTALLED_VERSION=`$wsjtx_app_version -v | awk '{print $2}'`
+else
+  INSTALLED_VERSION=`dpkg -l ${PROGRAM} | grep ${PROGRAM} | awk '{print $3}'`
+fi
+
 echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
 
 if [ "$DOWNLOAD_VERSION" == "" ]; then
@@ -26,6 +61,8 @@ if [ "$INSTALLED_VERSION" == "$DOWNLOAD_VERSION" ]; then
   echo "Installed ${PROGRAM} version is CURRENT."
   exit
 fi
+
+echo -e "\nUpdating $PROGRAM..."
 
 if ! cd $DIRECTORY; then
   echo "cd ${DIRECTORY} failed."
