@@ -41,6 +41,14 @@ if [ $linux_distribution == 'Ubuntu' ]; then
       sudo apt -y install build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev
   }
   fi
+elif [ $linux_distribution == 'Raspbian' ]; then
+  if [ $linux_version -lt 11 ]; then
+  {
+      echo "Raspbian pre-version 11 detected..."
+      # Raspbian earlier than 11:
+      sudo apt -y install build-essential cmake gfortran libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev
+  }
+  fi
 fi
 
 # Determine WSJT-X application version
