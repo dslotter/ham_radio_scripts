@@ -57,7 +57,7 @@ elif [ $linux_distribution == 'Linuxmint' ]; then
 elif [ $linux_distribution == 'Fedora' ]; then
   if [ $linux_version -eq 33 ]; then
   {
-    packages='automake libtool cmake gfortran qt5-linguist qt5-qtmultimedia5-devel qt5-qtserialport-devel qt5-qttools libgfortran boost-devel fftw-devel libusb-devel hamlib-devel systemd-devel'
+    packages='automake libtool cmake gfortran qt5-linguist qt5-qtmultimedia5-devel qt5-qtserialport-devel qt5-qttools libgfortran boost-devel fftw-devel libusbx-devel hamlib-devel'
   }
   fi
 fi
