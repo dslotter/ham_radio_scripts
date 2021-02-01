@@ -6,12 +6,37 @@
 # Copyright 2020 - 2021, Dave Slotter, W3DJS
 #
 
-DOWNLOAD_VERSION=2.3.0-rc3
+DOWNLOAD_VERSION=2.3.0
 DIRECTORY=${HOME}/hamradio
 PROGRAM=wsjtx
 export CXXFLAGS="-O2 -march=native -mtune=native"
 export CFLAGS="-O2 -march=native -mtune=native"
 export MAKEFLAGS="-j `grep CPU /proc/cpuinfo | wc -l`"
+
+# Determine WSJT-X application version
+wsjtx_app_version=`which wsjtx_app_version`
+if [ "$wsjtx_app_version" != "" ]; then
+  INSTALLED_VERSION=`$wsjtx_app_version -v | awk '{print $2}'`
+else
+  if [ "$linux_distribution" == 'Ubuntu' ]; then
+    INSTALLED_VERSION=`dpkg -l ${PROGRAM} | grep ${PROGRAM} | awk '{print $3}'`
+  elif [ "$linux_distribution" == 'Fedora' ]; then
+    INSTALLED_VERSION=`rpm -q ${PROGRAM} | grep -o "[0-9]\.[0-9]\.[0-9]-.*[^.fc33.x86_64]"`
+  fi
+fi
+
+echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
+
+if [ "$DOWNLOAD_VERSION" == "" ]; then
+  DOWNLOAD_VERSION="0.0.0"
+fi
+
+if [ "$INSTALLED_VERSION" == "$DOWNLOAD_VERSION" ]; then
+  echo "Installed ${PROGRAM} version is CURRENT."
+  exit
+fi
+
+echo -e "\nUpdating $PROGRAM..."
 
 if [ ! -x /usr/bin/wget ]; then
   echo "wget is not installed; automatically installing wget..."
@@ -75,31 +100,6 @@ if [ $linux_distribution != 'Fedora' ]; then
 elif [ $linux_distribution == 'Fedora' ]; then
   sudo yum install -y ${packages}
 fi
-
-# Determine WSJT-X application version
-wsjtx_app_version=`which wsjtx_app_version`
-if [ "$wsjtx_app_version" != "" ]; then
-  INSTALLED_VERSION=`$wsjtx_app_version -v | awk '{print $2}'`
-else
-  if [ $linux_distribution == 'Ubuntu' ]; then
-    INSTALLED_VERSION=`dpkg -l ${PROGRAM} | grep ${PROGRAM} | awk '{print $3}'`
-  elif [ $linux_distribution == 'Fedora' ]; then
-    INSTALLED_VERSION=`rpm -q ${PROGRAM} | grep -o "[0-9]\.[0-9]\.[0-9]-.*[^.fc33.x86_64]"`
-  fi
-fi
-
-echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
-
-if [ "$DOWNLOAD_VERSION" == "" ]; then
-  DOWNLOAD_VERSION="0.0.0"
-fi
-
-if [ "$INSTALLED_VERSION" == "$DOWNLOAD_VERSION" ]; then
-  echo "Installed ${PROGRAM} version is CURRENT."
-  exit
-fi
-
-echo -e "\nUpdating $PROGRAM..."
 
 if ! cd $DIRECTORY; then
   echo "cd ${DIRECTORY} failed."
