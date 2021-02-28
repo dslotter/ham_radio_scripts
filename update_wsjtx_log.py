@@ -6,12 +6,12 @@ Written by Dave Slotter, <w3djs@arrl.net>
 
 Amateur Radio Callsign W3DJS
 
-Created February 26, 2021 - Copyrighted under the GPL v3
-
-WSJTX_LOG_PATH may need to be updated on line 21 to match your path.
+Created February 21, 2021 - Copyrighted under the GPL v3
+Modified February 28, 2021 - Enhanced session and error handling
 """
 
 import os
+import sys
 import time
 import requests
 import xmltodict
@@ -35,6 +35,13 @@ APPEND_LOG_FLAG = False
 NEW_LOG = ""
 NEW_LOG_OFFSET = 0
 OLD_LOG_SIZE = 0
+
+
+def exit_auth_error():
+    """ Exit due to failed authentication """
+    print("Can not obtain session key for callsign lookup provider")
+    print("Make sure you have a paid XML API subscription for QRZ.")
+    sys.exit(7)  # RPC_AUTHERROR
 
 
 class UpdateWsjtxLog:
@@ -255,7 +262,8 @@ class UpdateWsjtxLog:
         key = "Invalid"
 
         # defining a params dict for the parameters to be sent to the API
-        params = {'username': self.username, 'password': self.password}
+        params = {'username': self.username, 'password': self.password,
+                  'agent': 'update_wsjtx_log_1.0.1'}
 
         print("Authenticating to QRZ.com...")
 
@@ -267,16 +275,26 @@ class UpdateWsjtxLog:
 
             # Parse XML directly into Dict
             raw_session = xmltodict.parse(request.content)
+
             # Check for error returned
             if 'Error' in raw_session['QRZDatabase']['Session']:
                 error = raw_session['QRZDatabase']['Session']['Error']
                 if error == 'Username/password incorrect':
                     return key
 
+            # Check for non-subscriber
+            if 'SubExp' in raw_session['QRZDatabase']['Session']:
+                subexp = raw_session['QRZDatabase']['Session']['SubExp']
+                if subexp == 'non-subscriber':
+                    return key
+
             # Retrieve Session Key
             key = raw_session['QRZDatabase']['Session']['Key']
         else:
             print("HTTP Status = {0}".format(request.status_code))
+
+        # Enable for debugging only:
+        # print("\nget_qrz_session_key raw sesssion:\n", raw_session, "\n")
 
         return key
 
@@ -285,8 +303,7 @@ class UpdateWsjtxLog:
         raw_session = None
 
         # defining a params dict for the parameters to be sent to the API
-        params = {'username': self.username, 'password': self.password,
-                  'callsign': self.call}
+        params = {'s': self.session_key, 'callsign': self.call}
 
         print("Requesting callsign information...")
 
@@ -300,6 +317,23 @@ class UpdateWsjtxLog:
             raw_session = xmltodict.parse(request.content)
         else:
             print("HTTP Status = {0}".format(request.status_code))
+
+        # Enable for debugging only:
+        # print("\nget_callsign_info raw sesssion:\n", raw_session, "\n")
+
+        # Check for Session Timeout
+        if 'Error' in raw_session['QRZDatabase']['Session']:
+            error = raw_session['QRZDatabase']['Session']['Error']
+            if error == 'Session Timeout':
+                print("Session Timeout: obtaining new session key")
+                self.session_key = self.get_qrz_session_key()
+                if self.session_key == "Invalid":
+                    exit_auth_error()
+
+        # Check for error returned
+        if 'Error' in raw_session['QRZDatabase']['Session']:
+            error = raw_session['QRZDatabase']['Session']['Error']
+            print("Error when querying QRZ.COM: ", error)
 
         return raw_session
 
@@ -340,6 +374,8 @@ class FsEventHandler(FileSystemEventHandler):
         # Retrieve Session Key
         self.update_wsjtx_log.session_key = \
             self.update_wsjtx_log.get_qrz_session_key()
+        if self.update_wsjtx_log.session_key == "Invalid":
+            exit_auth_error()
 
     def on_modified(self, event):
         """ Called when WSJT-X logfile is modified """
@@ -358,16 +394,16 @@ class FsEventHandler(FileSystemEventHandler):
                 open(WSJTX_LOG_PATH, "r+")
             self.update_wsjtx_log.wsjtx_logfile.seek(OLD_LOG_SIZE)
             line = self.update_wsjtx_log.wsjtx_logfile.readline()
-            print("Got log entry:\n\n", line)
+            print("Read new log entry:\n\n", line)
             self.update_wsjtx_log.adif_log_entry = line
             self.update_wsjtx_log.parse_adif()
             call_sign_xml = self.update_wsjtx_log.get_callsign_info()
             if call_sign_xml is not None:
                 self.update_wsjtx_log.parse_callsign_info(call_sign_xml)
+                self.update_wsjtx_log.update_log_entry()
+                self.update_wsjtx_log.reset_vals()
             else:
                 print("Failed to retrieve callsign info from QRZ.com.")
-            self.update_wsjtx_log.update_log_entry()
-            self.update_wsjtx_log.reset_vals()
             self.update_wsjtx_log.wsjtx_logfile.close()
 
 
