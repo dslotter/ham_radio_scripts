@@ -6,10 +6,12 @@ Written by Dave Slotter, <w3djs@arrl.net>
 
 Amateur Radio Callsign W3DJS
 
-Created February 21, 2021 - Copyrighted under the GPL v3
-Modified February 28, 2021 - Enhanced session and error handling
+Created  February 21, 2021 - Copyrighted under the GPL v3
+Modified February 28, 2021 - Enhanced session and error handling (1.0.1)
+Modified February 28, 2021 - Added support for callook.info (1.1)
 """
 
+import argparse
 import os
 import sys
 import time
@@ -29,6 +31,9 @@ QRZ_INTERFACE_VERSION = "1.34"
 # QRZ.com XML api-endpoint
 QRZ_URL = "http://xmldata.qrz.com/xml/" + QRZ_INTERFACE_VERSION + "/"
 QRZ_URL_SECURE = "https://xmldata.qrz.com/xml/" + QRZ_INTERFACE_VERSION + "/"
+
+# Callook.info api-endpoint
+CALLOOK_URL = "https://callook.info/"
 
 # Blech: globals
 APPEND_LOG_FLAG = False
@@ -74,10 +79,11 @@ class UpdateWsjtxLog:
     comment = ""
     adif_log_entry = ""
 
-    def __init__(self):
+    def __init__(self, data_source):
         self.reset_vals()
         self.station_callsign = ""
         self.wsjtx_size = 0
+        self.data_source = data_source
 
     def reset_vals(self):
         """ Reset all values to beginning state """
@@ -130,7 +136,8 @@ class UpdateWsjtxLog:
             attr_len = int(strbuf[end + 2:pos + 1])
             strbuf = str(self.adif_log_entry)
             attr = strbuf[pos + 2:pos + 2 + int(attr_len)]
-#            print("%s: %s" % (token, attr))
+            # Enable for debugging only:
+            # print("%s: %s" % (token, attr))
             if not attr:
                 continue
 
@@ -190,6 +197,7 @@ class UpdateWsjtxLog:
 <comment:%d>%s \
 <name:%d>%s \
 <operator:%d>%s \
+<app_uwl_source:%d>%s \
 <eor>\n""" % \
              (len(self.call), self.call,
               len(self.grid_r), self.grid_r,
@@ -207,7 +215,8 @@ class UpdateWsjtxLog:
               len(self.power), self.power,
               len(self.comment), self.comment,
               len(self.name_r), self.name_r,
-              len(self.operator), self.operator)
+              len(self.operator), self.operator,
+              len(self.data_source), self.data_source)
         else:
             new_adif_log_entry = """<call:%d>%s " \
 <gridsquare:%d>%s \
@@ -227,6 +236,7 @@ class UpdateWsjtxLog:
 <comment:%d>%s \
 <name:%d>%s \
 <operator:%d>%s \
+<app_uwl_source:%d>%s \
 <eor>\n""" % \
              (len(self.call), self.call,
               len(self.grid_r), self.grid_r,
@@ -245,7 +255,8 @@ class UpdateWsjtxLog:
               len(self.power), self.power,
               len(self.comment), self.comment,
               len(self.name_r), self.name_r,
-              len(self.operator), self.operator)
+              len(self.operator), self.operator,
+              len(self.data_source), self.data_source)
 
         # Deferred write to prevent unwanted recursion
         # pylint: disable=global-statement
@@ -257,13 +268,18 @@ class UpdateWsjtxLog:
         global OLD_LOG_SIZE
         NEW_LOG_OFFSET = OLD_LOG_SIZE
 
+    def get_callook_session_key(self):
+        """ There is no Session Key for Callook.info """
+        self.session_key = "VALID"
+        return "VALID"
+
     def get_qrz_session_key(self):
         """ Get QRZ Session Key """
-        key = "Invalid"
+        key = "INVALID"
 
         # defining a params dict for the parameters to be sent to the API
         params = {'username': self.username, 'password': self.password,
-                  'agent': 'update_wsjtx_log_1.0.1'}
+                  'agent': 'update_wsjtx_log_1.1'}
 
         print("Authenticating to QRZ.com...")
 
@@ -275,6 +291,9 @@ class UpdateWsjtxLog:
 
             # Parse XML directly into Dict
             raw_session = xmltodict.parse(request.content)
+
+            # Enable for debugging only:
+            # print("get_qrz_session_key raw sesssion:\n", raw_session, "\n")
 
             # Check for error returned
             if 'Error' in raw_session['QRZDatabase']['Session']:
@@ -293,19 +312,54 @@ class UpdateWsjtxLog:
         else:
             print("HTTP Status = {0}".format(request.status_code))
 
-        # Enable for debugging only:
-        # print("\nget_qrz_session_key raw sesssion:\n", raw_session, "\n")
-
+        # Enable for debugging:
+        # print("Session key:", key)
         return key
 
-    def get_callsign_info(self):
+    def get_session_key(self):
+        """ Get session key for online callsign lookup provider """
+        key = "INVALID"
+        if self.data_source == "qrz.com":
+            key = self.get_qrz_session_key()
+        elif self.data_source == "callook.info":
+            key = self.get_callook_session_key()
+        # Enable for debugging:
+        # print("get_session_key:", self.session_key)
+        return key
+
+    def get_callook_callsign_info(self):
+        """ Request callsign info from QRZ """
+        raw_session = None
+
+        # creating the URL to use for the request
+        request_url = CALLOOK_URL + self.call + "/xml"
+
+        print("Requesting callsign information for {}...".format(self.call))
+
+        # sending get request and saving the response as response object
+        request = requests.get(url=request_url)
+
+        if request.status_code == 200:
+            print("200 OK\n")
+
+            # Parse XML directly into Dict
+            raw_session = xmltodict.parse(request.content)
+        else:
+            print("HTTP Status = {0}".format(request.status_code))
+
+        # Enable for debugging only:
+        # print("get_callook_callsign_info raw sesssion:\n", raw_session, "\n")
+
+        return raw_session
+
+    def get_qrz_callsign_info(self):
         """ Request callsign info from QRZ """
         raw_session = None
 
         # defining a params dict for the parameters to be sent to the API
         params = {'s': self.session_key, 'callsign': self.call}
 
-        print("Requesting callsign information...")
+        print("Requesting callsign information for {}...".format(self.call))
 
         # sending get request and saving the response as response object
         request = requests.get(url=QRZ_URL, params=params)
@@ -319,15 +373,15 @@ class UpdateWsjtxLog:
             print("HTTP Status = {0}".format(request.status_code))
 
         # Enable for debugging only:
-        # print("\nget_callsign_info raw sesssion:\n", raw_session, "\n")
+        # print("get_qrz_callsign_info raw sesssion:\n", raw_session, "\n")
 
         # Check for Session Timeout
         if 'Error' in raw_session['QRZDatabase']['Session']:
             error = raw_session['QRZDatabase']['Session']['Error']
             if error == 'Session Timeout':
                 print("Session Timeout: obtaining new session key")
-                self.session_key = self.get_qrz_session_key()
-                if self.session_key == "Invalid":
+                self.session_key = self.get_session_key()
+                if self.session_key == "INVALID":
                     exit_auth_error()
 
         # Check for error returned
@@ -337,7 +391,41 @@ class UpdateWsjtxLog:
 
         return raw_session
 
-    def parse_callsign_info(self, call_sign_xml):
+    def get_callsign_info(self):
+        """ Request callsign info from online callsign lookup provider """
+        if self.data_source == "qrz.com":
+            callsign_info = self.get_qrz_callsign_info()
+        elif self.data_source == "callook.info":
+            callsign_info = self.get_callook_callsign_info()
+        return callsign_info
+
+    def parse_callook_callsign_info(self, call_sign_xml):
+        """ Parse name and grid from Callook """
+        try:
+            status = call_sign_xml['callook']['status']
+            if status in ('INVALID', 'UPDATING'):
+                print("Call lookup failed:", status)
+                return
+        except KeyError as error:
+            print("Error =", error)
+
+        try:
+            if self.name_r == "":
+                self.name_r = \
+                    call_sign_xml['callook']['name']
+                print("Missing name: " + self.name_r)
+        except KeyError as error:
+            print("Error =", error)
+
+        try:
+            if self.grid_r == "":
+                self.grid_r = \
+                    call_sign_xml['callook']['location']['gridsquare'][0:4]
+                print("Missing Grid square: " + self.grid_r)
+        except KeyError as error:
+            print("Error =", error)
+
+    def parse_qrz_callsign_info(self, call_sign_xml):
         """ Parse name and grid from QRZ """
         try:
             if self.name_r == "":
@@ -355,13 +443,20 @@ class UpdateWsjtxLog:
         except KeyError as error:
             print("Error =", error)
 
+    def parse_callsign_info(self, call_sign_xml):
+        """ Parse name and grid from online callsign lookup provider """
+        if self.data_source == "qrz.com":
+            self.parse_qrz_callsign_info(call_sign_xml)
+        elif self.data_source == "callook.info":
+            self.parse_callook_callsign_info(call_sign_xml)
+
 
 class FsEventHandler(FileSystemEventHandler):
     """ Class FsEventHandler """
     update_wsjtx_log = None
 
-    def __init__(self):
-        self.update_wsjtx_log = UpdateWsjtxLog()
+    def __init__(self, data_source):
+        self.update_wsjtx_log = UpdateWsjtxLog(data_source)
 
         # Username and Password for QRZ Website are provided in
         # environment variables
@@ -373,8 +468,9 @@ class FsEventHandler(FileSystemEventHandler):
 
         # Retrieve Session Key
         self.update_wsjtx_log.session_key = \
-            self.update_wsjtx_log.get_qrz_session_key()
-        if self.update_wsjtx_log.session_key == "Invalid":
+            self.update_wsjtx_log.get_session_key()
+        if self.update_wsjtx_log.session_key == "INVALID":
+            print("Got here 2")
             exit_auth_error()
 
     def on_modified(self, event):
@@ -418,8 +514,20 @@ def main():
     print("* WSJT-X Log Updater written by Dave Slotter, W3DJS *")
     print("*****************************************************\n")
 
+    # Parse command line argument for data source
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", help="Specify data source: QRZ or CALLOOK")
+    args = parser.parse_args()
+    data_source = args.source.upper()
+    if data_source == 'QRZ':
+        data_source = "qrz.com"
+        print("Using data source: QRZ.com")
+    elif data_source == 'CALLOOK':
+        data_source = "callook.info"
+        print("Using data source: callook.info")
+
     # Process log entries - Watch for changes to WSJTX ADIF log.
-    event_handler = FsEventHandler()
+    event_handler = FsEventHandler(data_source)
 
     # pylint: disable=too-many-nested-blocks
     while True:
