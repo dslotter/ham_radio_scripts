@@ -516,7 +516,8 @@ def main():
 
     # Parse command line argument for data source
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", help="Specify data source: QRZ or CALLOOK", required=True)
+    parser.add_argument("--source", help="Specify data source: QRZ or CALLOOK",
+                        required=True)
     args = parser.parse_args()
     data_source = args.source.upper()
     if data_source == 'QRZ':
