@@ -9,6 +9,7 @@ Amateur Radio Callsign W3DJS
 Created  February 21, 2021 - Copyrighted under the GPL v3
 Modified February 28, 2021 - Enhanced session and error handling (1.0.1)
 Modified February 28, 2021 - Added support for callook.info (1.1)
+Modified March     6, 2021 - Minor fixes (1.1.1)
 """
 
 import argparse
@@ -218,7 +219,7 @@ class UpdateWsjtxLog:
               len(self.operator), self.operator,
               len(self.data_source), self.data_source)
         else:
-            new_adif_log_entry = """<call:%d>%s " \
+            new_adif_log_entry = """<call:%d>%s \
 <gridsquare:%d>%s \
 <mode:%d>%s \
 <submode:%d>%s \
@@ -470,7 +471,6 @@ class FsEventHandler(FileSystemEventHandler):
         self.update_wsjtx_log.session_key = \
             self.update_wsjtx_log.get_session_key()
         if self.update_wsjtx_log.session_key == "INVALID":
-            print("Got here 2")
             exit_auth_error()
 
     def on_modified(self, event):
