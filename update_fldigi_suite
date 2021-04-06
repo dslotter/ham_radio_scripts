@@ -2,17 +2,47 @@
 #
 # Script to update FLDIGI suite
 #
-# Copyright 2020, Dave Slotter, W3DJS
+# Copyright 2020 - 2021, Dave Slotter, W3DJS
 #
 
 DIRECTORY=/home/pi/hamradio
 FLDIGI_APPS=("flrig" "fldigi" "flaa" "flamp" "flcluster" "fllog" "flmsg" "flnet" "flwkey" "flwrap")
 export CXXFLAGS="-O2 -march=native -mtune=native"
 export CFLAGS="-O2 -march=native -mtune=native"
+export MAKEFLAGS="-j `grep CPU /proc/cpuinfo | wc -l`"
+
+if [ ! -x /usr/bin/curl ]; then
+  echo "Curl is not installed; automatically installing curl..."
+  sudo apt -y install curl
+fi
+
+if [ ! -x /usr/bin/wget ]; then
+  echo "wget is not installed; automatically installing wget..."
+  sudo apt -y install wget
+fi
+
+if [ ! -d "${DIRECTORY}" ]; then
+  echo "${DIRECTORY} does not exist; creating it..."
+  mkdir -p "${DIRECTORY}"
+fi
 
 # Ensure needed components are present
 echo -e "\nDownloading any missing required packages..."
-sudo apt -y install build-essential libfltk1.3-dev libsamplerate0-dev portaudio19-dev libsndfile1-dev libxft-dev libxinerama-dev libxcursor-dev libusb-1.0.0-dev libpulse-dev pavucontrol
+ubuntu_version=`lsb_release -sr | awk -F \. {'print $1'}`
+if [ $ubuntu_version -lt 20 ]; then
+{
+    echo "Ubuntu pre-version 20 detected..."
+    # Ubuntu earlier than 20.04:
+    sudo apt -y install build-essential libfltk1.3-dev libsamplerate0-dev portaudio19-dev libsndfile1-dev libxft-dev libxinerama-dev libxcursor-dev libpulse-dev pavucontrol libusb-1.0.0-dev
+}
+else
+{
+    echo "Ubuntu version 20 or later detected..."
+    # Ubuntu earlier than 20.04:
+    # Ubuntu 20.04:
+    sudo apt -y install build-essential libfltk1.3-dev libsamplerate0-dev portaudio19-dev libsndfile1-dev libxft-dev libxinerama-dev libxcursor-dev libpulse-dev pavucontrol libusb-1.0-0-dev
+}
+fi
 
 for PROGRAM in "${FLDIGI_APPS[@]}"
 do
@@ -21,7 +51,7 @@ do
   echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
 
   echo "Getting current version from Internet..."
-  CURRENT_VERSION=`curl --silent "http://www.w1hkj.com/files/${PROGRAM}/" | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | uniq`
+  CURRENT_VERSION=`curl --silent "https://sourceforge.net/projects/fldigi/files/${PROGRAM}/" | grep -Po "${PROGRAM}-[0-9]+\.[0-9]+\.[0-9]+" | uniq | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | sort | tail -n 1`
   if [ "$CURRENT_VERSION" == "" ]; then
     echo "Version check of ${PROGRAM} failed."
     continue
@@ -38,7 +68,7 @@ do
     exit
   fi
 
-  if ! wget http://www.w1hkj.com/files/${PROGRAM}/${PROGRAM}-${CURRENT_VERSION}.tar.gz; then
+  if ! wget https://sourceforge.net/projects/fldigi/files/${PROGRAM}/${PROGRAM}-${CURRENT_VERSION}.tar.gz; then
     echo "Download of ${PROGRAM}-${CURRENT_VERSION} failed."
     continue
   fi
@@ -90,3 +120,5 @@ do
 
   echo "Upgrade of ${PROGRAM}-${CURRENT_VERSION} completed successfully."
 done
+
+echo -e "\nUpgrade of Fldigi suite completed."
