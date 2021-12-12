@@ -81,7 +81,7 @@ elif [ $linux_distribution == 'Raspbian' ]; then
   }
   elif [ $linux_version -eq 11 ]; then
   {
-    packages='build-essential cmake gfortran qttools5-dev qttools5-dev-tools qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev libusb-1.0-0-dev'
+    packages='build-essential cmake gfortran qttools5-dev qttools5-dev-tools qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev libusb-1.0-0-dev libudev-dev'
   }
   fi
 elif [ $linux_distribution == 'Linuxmint' ]; then
