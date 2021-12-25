@@ -6,7 +6,7 @@
 # Copyright 2020 - 2021, Dave Slotter, W3DJS
 #
 
-DOWNLOAD_VERSION=2.5.2
+DOWNLOAD_VERSION=2.5.3
 DIRECTORY=${HOME}/hamradio
 PROGRAM=wsjtx
 export CXXFLAGS="-O2 -march=native -mtune=native"
