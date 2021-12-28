@@ -1,0 +1,148 @@
+#!/bin/bash
+#
+# Script to update JS8Call on Raspberry Pi, Ubuntu,
+# Debian, Linux Mint or Fedora
+#
+# Copyright 2020 - 2021, Dave Slotter, W3DJS
+#
+# LICENSE REQUIREMENT: Attribution must be given the first time this
+# script is mentioned or used in your project.
+#
+# For example, if you use this on a YouTube video, you must attribute me,
+# Dave Slotter, W3DJS and the location of this script the very first time
+# you mention this script in your video.
+#
+# The same general idea goes for any other media type (blog, webpage, etc.)
+#
+
+DIRECTORY=${HOME}/hamradio
+PROGRAM=js8call
+export CXXFLAGS="-O2 -march=native -mtune=native"
+export CFLAGS="-O2 -march=native -mtune=native"
+export MAKEFLAGS="-j `grep CPU /proc/cpuinfo | wc -l`"
+
+echo -e "\nUpdating $PROGRAM..."
+
+if [ ! -x /usr/bin/git ]; then
+  echo "git is not installed; automatically installing git..."
+  sudo apt -y install git
+fi
+
+if [ ! -d "${DIRECTORY}" ]; then
+  echo "${DIRECTORY} does not exist; creating it..."
+  mkdir -p "${DIRECTORY}"
+fi
+
+if [ -f /etc/redhat-release ]; then
+  sudo yum install -y redhat-lsb-core
+fi
+
+# Ensure required components are present
+echo -e "\nDownloading any missing required packages..."
+linux_distribution=`lsb_release -si`
+linux_version=`lsb_release -sr | awk -F \. {'print $1'}`
+if [ $linux_distribution == 'Ubuntu' ]; then
+  if [ $linux_version -lt 20 ]; then
+  {
+    # Ubuntu earlier than 20.XX:
+    packages='build-essential cmake gfortran libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev'
+  }
+  else
+  {
+      # Ubuntu equal to or later than 20.XX:
+    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev'
+  }
+  fi
+elif [ $linux_distribution == 'Debian' ]; then
+  if [ $linux_version -lt 11 ]; then
+  {
+    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev libusb-1.0-0-dev libudev-dev'
+  }
+  fi
+elif [ $linux_distribution == 'Raspbian' ]; then
+  if [ $linux_version -lt 11 ]; then
+  {
+    packages='build-essential cmake gfortran libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev'
+  }
+  elif [ $linux_version -eq 11 ]; then
+  {
+    packages='build-essential cmake gfortran qttools5-dev qttools5-dev-tools qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev libusb-1.0-0-dev libudev-dev'
+  }
+  fi
+elif [ $linux_distribution == 'Linuxmint' ]; then
+  if [ $linux_version -eq 20 ]; then
+  {
+    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev'
+  }
+  fi
+elif [ $linux_distribution == 'Fedora' ]; then
+  if [ $linux_version -eq 33 ]; then
+  {
+    packages='automake libtool cmake gfortran qt5-linguist qt5-qtmultimedia5-devel qt5-qtserialport-devel qt5-qttools libgfortran boost-devel fftw-devel libusbx-devel hamlib-devel'
+  }
+  fi
+fi
+
+echo "Linux ${linux_distribution} version ${linux_version} detected..."
+if [ $linux_distribution != 'Fedora' ]; then
+  sudo apt install -y ${packages}
+elif [ $linux_distribution == 'Fedora' ]; then
+  sudo yum install -y ${packages}
+fi
+
+if ! cd $DIRECTORY; then
+  echo "cd ${DIRECTORY} failed."
+  exit
+fi
+
+if ! git clone https://bitbucket.org/widefido/${PROGRAM}/src/${PROGRAM}/; then
+  echo "Download of ${PROGRAM} failed."
+  exit
+fi
+
+if ! cd ${PROGRAM}; then
+  echo "cd ${PROGRAM} failed."
+  exit
+fi
+
+if ! mkdir build; then
+  echo "mkdir build failed."
+  exit
+fi
+
+if ! cd build; then
+  echo "cd build failed."
+  exit
+fi
+
+if ! cmake -DWSJT_SKIP_MANPAGES=ON ..; then
+  echo "Generate cmake makefiles failed."
+  exit
+fi
+
+if ! cmake --build . ; then
+  echo "cmake build failed."
+  exit
+fi
+
+if ! sudo cmake --build . --target install ; then
+  echo "cmake install failed."
+  exit
+fi
+
+if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/share/applications/${PROGRAM}.desktop; then
+  echo "sed failed to fix ${PROGRAM}.desktop."
+  exit
+fi
+
+if ! cd $DIRECTORY; then
+  echo "cd ${DIRECTORY} failed."
+  exit
+fi
+
+if ! rm -fr ${PROGRAM}; then
+  echo "Removing source directory for ${PROGRAM} failed."
+  exit
+fi
+
+echo "Upgrade of ${PROGRAM} completed successfully."
