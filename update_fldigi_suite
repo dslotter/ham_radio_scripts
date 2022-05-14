@@ -2,7 +2,9 @@
 #
 # Script to update FLDIGI suite
 #
-# Copyright 2020 - 2021, Dave Slotter, W3DJS
+# Copyright 2020 - 2022, Dave Slotter, W3DJS
+#
+# Enhancements by LarryGFlorence May 2022
 #
 
 DIRECTORY=/home/pi/hamradio
@@ -28,27 +30,13 @@ fi
 
 # Ensure needed components are present
 echo -e "\nDownloading any missing required packages..."
-ubuntu_version=`lsb_release -sr | awk -F \. {'print $1'}`
-if [ $ubuntu_version -lt 20 ]; then
-{
-    echo "Ubuntu pre-version 20 detected..."
-    # Ubuntu earlier than 20.04:
-    sudo apt -y install build-essential libfltk1.3-dev libsamplerate0-dev portaudio19-dev libsndfile1-dev libxft-dev libxinerama-dev libxcursor-dev libpulse-dev pavucontrol libusb-1.0.0-dev
-}
-else
-{
-    echo "Ubuntu version 20 or later detected..."
-    # Ubuntu earlier than 20.04:
-    # Ubuntu 20.04:
-    sudo apt -y install build-essential libfltk1.3-dev libsamplerate0-dev portaudio19-dev libsndfile1-dev libxft-dev libxinerama-dev libxcursor-dev libpulse-dev pavucontrol libusb-1.0-0-dev
-}
-fi
+sudo apt -y install build-essential libfltk1.3-dev libsamplerate0-dev portaudio19-dev libsndfile1-dev libxft-dev libxinerama-dev libxcursor-dev libpulse-dev pavucontrol libusb-1.0-0-dev
 
 for PROGRAM in "${FLDIGI_APPS[@]}"
 do
   echo -e "\nUpdating $PROGRAM..."
   INSTALLED_VERSION=`${PROGRAM} --version | head -n 1 | awk '{print $2}'`
-  echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
+  echo "Installed ${PROGRAM} version is: ${INSTALLED_VERSION}."
 
   echo "Getting current version from Internet..."
   CURRENT_VERSION=`curl --silent "https://sourceforge.net/projects/fldigi/files/${PROGRAM}/" | grep -Po "${PROGRAM}-[0-9]+\.[0-9]+\.[0-9]+" | uniq | grep -Po "[0-9]+\.[0-9]+\.[0-9]+" | sort | tail -n 1`
@@ -61,14 +49,14 @@ do
     echo "Installed ${PROGRAM} version is CURRENT."
     continue
   fi
-  echo "Installed ${PROGRAM} version is ${CURRENT_VERSION}."
+  echo "Current ${PROGRAM} version is ${CURRENT_VERSION}."
 
   if ! cd $DIRECTORY; then
     echo "cd ${DIRECTORY} failed."
     exit
   fi
 
-  if ! wget https://sourceforge.net/projects/fldigi/files/${PROGRAM}/${PROGRAM}-${CURRENT_VERSION}.tar.gz; then
+   if [ ! -f ${PROGRAM}-${CURRENT_VERSION}.tar.gz ] && ! wget https://sourceforge.net/projects/fldigi/files/${PROGRAM}/${PROGRAM}-${CURRENT_VERSION}.tar.gz; then
     echo "Download of ${PROGRAM}-${CURRENT_VERSION} failed."
     continue
   fi
