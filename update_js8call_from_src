@@ -15,11 +15,14 @@
 # The same general idea goes for any other media type (blog, webpage, etc.)
 #
 
-DIRECTORY=${HOME}/hamradio
 PROGRAM=js8call
+DIRECTORY=${HOME}/hamradio
 export CXXFLAGS="-O2 -march=native -mtune=native"
 export CFLAGS="-O2 -march=native -mtune=native"
 export MAKEFLAGS="-j `grep CPU /proc/cpuinfo | wc -l`"
+
+linux_distribution=`lsb_release -si`
+linux_version=`lsb_release -sr | awk -F \. {'print $1'}`
 
 echo -e "\nUpdating $PROGRAM..."
 
@@ -39,18 +42,21 @@ fi
 
 # Ensure required components are present
 echo -e "\nDownloading any missing required packages..."
-linux_distribution=`lsb_release -si`
-linux_version=`lsb_release -sr | awk -F \. {'print $1'}`
 if [ $linux_distribution == 'Ubuntu' ]; then
   if [ $linux_version -lt 20 ]; then
   {
     # Ubuntu earlier than 20.XX:
     packages='build-essential cmake gfortran libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev'
   }
+  elif [ $linux_version -lt 22 ]; then
+  {
+    # Ubuntu equal to or later than 20.XX:
+    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev'
+  }
   else
   {
-      # Ubuntu equal to or later than 20.XX:
-    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev'
+    # Ubuntu equal to or later than 22.XX:
+    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran5 libboost-all-dev libfftw3-dev'
   }
   fi
 elif [ $linux_distribution == 'Debian' ]; then
