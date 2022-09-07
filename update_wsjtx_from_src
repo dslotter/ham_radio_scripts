@@ -1,20 +1,18 @@
 #!/bin/bash
 #
 # Script to update WSJT-X on Raspberry Pi, Ubuntu,
-# Xubuntu, Debian, Linux Mint or Fedora
+# Debian, Linux Mint or Fedora
 #
 # Copyright 2020 - 2022, Dave Slotter, W3DJS
 #
 
-DOWNLOAD_VERSION=2.5.4
-PROGRAM=wsjtx
+DOWNLOAD_VERSION=2.6.0-rc4
+DIRECTORY_VERSION=2.6.0
 DIRECTORY=${HOME}/hamradio
+PROGRAM=wsjtx
 export CXXFLAGS="-O2 -march=native -mtune=native"
 export CFLAGS="-O2 -march=native -mtune=native"
-export MAKEFLAGS="-j `nproc`"
-
-linux_distribution=`lsb_release -si`
-linux_version=`lsb_release -sr | awk -F \. {'print $1'}`
+export MAKEFLAGS="-j `grep CPU /proc/cpuinfo | wc -l`"
 
 # Determine WSJT-X application version
 wsjtx_app_version=`which wsjtx_app_version`
@@ -57,20 +55,19 @@ fi
 
 # Ensure required components are present
 echo -e "\nDownloading any missing required packages..."
+linux_distribution=`lsb_release -si`
+linux_version=`lsb_release -sr | awk -F \. {'print $1'}`
+
 if [ $linux_distribution == 'Ubuntu' ]; then
   if [ $linux_version -lt 20 ]; then
   {
     # Ubuntu earlier than 20.XX:
     packages='build-essential cmake gfortran libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev'
   }
-  elif [ $linux_version -lt 22 ]; then
-  {
-    # Ubuntu equal to or later than 20.XX:
-    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev'
-  }
   else
   {
-    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran5 libboost-all-dev libfftw3-dev'
+      # Ubuntu equal to or later than 20.XX:
+    packages='build-essential cmake gfortran qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev qttools5-dev libgfortran4 libboost-all-dev libfftw3-dev'
   }
   fi
 elif [ $linux_distribution == 'Debian' ]; then
@@ -129,8 +126,8 @@ if ! tar -zxf ${PROGRAM}-${DOWNLOAD_VERSION}.tgz; then
   exit
 fi
 
-if ! cd ${PROGRAM}-${DOWNLOAD_VERSION}/src; then
-  echo "cd ${PROGRAM}-${DOWNLOAD_VERSION}/src failed."
+if ! cd ${PROGRAM}-${DIRECTORY_VERSION}/src; then
+  echo "cd ${PROGRAM}-${DIRECTORY_VERSION}/src failed."
   exit
 fi
 
@@ -184,8 +181,8 @@ if ! cd $DIRECTORY; then
   exit
 fi
 
-if ! rm -fr ${PROGRAM}-${DOWNLOAD_VERSION}; then
-  echo "Removing source directory for ${PROGRAM}-${DOWNLOAD_VERSION} failed."
+if ! rm -fr ${PROGRAM}-${DIRECTORY_VERSION}; then
+  echo "Removing source directory for ${PROGRAM}-${DIRECTORY_VERSION} failed."
   exit
 fi
 
