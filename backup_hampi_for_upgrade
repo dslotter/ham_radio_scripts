@@ -1,0 +1,43 @@
+#!/usr/bin/bash
+
+cd /tmp
+tar --use-compress-program=pigz -cvf pi_home_dir.tar.gz \
+--exclude-caches \
+--exclude "pi/.cache/*" \
+--exclude "pi/.ansible/*" \
+--exclude "pi/.cargo/*" \
+--exclude "pi/.cmake/*" \
+--exclude "pi/.rustup/*" \
+--exclude "pi/.texlive2020/*" \
+--exclude "pi/Downloads/*" \
+--exclude "pi/GridTracker/*" \
+--exclude "pi/HamRadio/*" \
+--exclude "pi/YAAC/*" \
+--exclude "pi/dump1090_1.3.1_sdrplay/*" \
+--exclude "pi/wsjtx_to_n3fjp/*" \
+--exclude "pi/pyqso-1.1.0/*" \
+--exclude "pi/Documents/GridTracker/*" \
+--exclude "pi/Documents/ardop-list/*" \
+--exclude "pi/.local/lib/python3.7/*" \
+--exclude "pi/perl5/*" \
+--exclude "pi/ardop/*" \
+--exclude "pi/patmenu2/*" \
+--exclude "pi/lopora/*" \
+--exclude "pi/itshfbc/*" \
+--exclude "pi/hamradio/acarsdec/*" \
+--exclude "pi/hamradio/CTY_FILES/*" \
+--exclude "pi/hamradio/CygnusRFI/*" \
+--exclude "pi/hamradio/D-Rats/*" \
+--exclude "pi/hamradio/draws-manager/*" \
+--exclude "pi/hamradio/noaa-apt/*" \
+--exclude "pi/hamradio/openwebrx/*" \
+--exclude "pi/hamradio/rpitx/*" \
+--exclude "pi/hamradio/Universal_HamRadio_Remote_HTML5/*" \
+--exclude "pi/hamradio/wxWidgets-staticlib/*" \
+--exclude "pi/bin/*" \
+--exclude "pi/DST_Root_CA_X3.crt" \
+--absolute-names \
+--preserve-permissions \
+/home/pi/
+
+echo -e "\n*** Backup file is at /tmp/pi_home_dir.tar.gz ***\n"
