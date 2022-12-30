@@ -6,43 +6,13 @@
 # Copyright 2020 - 2022, Dave Slotter, W3DJS
 #
 
-DOWNLOAD_VERSION=2.6.0-rc4
-DIRECTORY_VERSION=2.6.0
 DIRECTORY=${HOME}/hamradio
 PROGRAM=wsjtx
 export CXXFLAGS="-O2 -march=native -mtune=native"
 export CFLAGS="-O2 -march=native -mtune=native"
 export MAKEFLAGS="-j `grep CPU /proc/cpuinfo | wc -l`"
 
-# Determine WSJT-X application version
-wsjtx_app_version=`which wsjtx_app_version`
-if [ "$wsjtx_app_version" != "" ]; then
-  INSTALLED_VERSION=`$wsjtx_app_version -v | awk '{print $2}'`
-else
-  if [ "$linux_distribution" == 'Ubuntu' ]; then
-    INSTALLED_VERSION=`dpkg -l ${PROGRAM} | grep ${PROGRAM} | awk '{print $3}'`
-  elif [ "$linux_distribution" == 'Fedora' ]; then
-    INSTALLED_VERSION=`rpm -q ${PROGRAM} | grep -o "[0-9]\.[0-9]\.[0-9]-.*[^.fc33.x86_64]"`
-  fi
-fi
-
-echo "Installed ${PROGRAM} version is: $INSTALLED_VERSION"
-
-if [ "$DOWNLOAD_VERSION" == "" ]; then
-  DOWNLOAD_VERSION="0.0.0"
-fi
-
-if [ "$INSTALLED_VERSION" == "$DOWNLOAD_VERSION" ]; then
-  echo "Installed ${PROGRAM} version is CURRENT."
-  exit
-fi
-
 echo -e "\nUpdating $PROGRAM..."
-
-if [ ! -x /usr/bin/wget ]; then
-  echo "wget is not installed; automatically installing wget..."
-  sudo apt -y install wget
-fi
 
 if [ ! -d "${DIRECTORY}" ]; then
   echo "${DIRECTORY} does not exist; creating it..."
@@ -116,28 +86,13 @@ if ! cd $DIRECTORY; then
   exit
 fi
 
-if ! wget --no-check-certificate https://physics.princeton.edu/pulsar/K1JT/${PROGRAM}-${DOWNLOAD_VERSION}.tgz; then
-  echo "Download of ${PROGRAM}_${DOWNLOAD_VERSION}.tgz failed."
+if ! git clone https://git.code.sf.net/p/wsjt/wsjtx wsjt-wsjtx; then
+  echo "Download of ${PROGRAM} failed."
   exit
 fi
 
-if ! tar -zxf ${PROGRAM}-${DOWNLOAD_VERSION}.tgz; then
-  echo "Decompressing archive ${PROGRAM}-${DOWNLOAD_VERSION}.tgz failed."
-  exit
-fi
-
-if ! cd ${PROGRAM}-${DIRECTORY_VERSION}/src; then
-  echo "cd ${PROGRAM}-${DIRECTORY_VERSION}/src failed."
-  exit
-fi
-
-if ! tar -zxf ${PROGRAM}.tgz; then
-  echo "Decompressing archive ${PROGRAM}.tgz failed."
-  exit
-fi
-
-if ! cd ${PROGRAM}; then
-  echo "cd ${PROGRAM} failed."
+if ! cd wsjt-${PROGRAM}; then
+  echo "cd wsjt-${PROGRAM} failed."
   exit
 fi
 
@@ -181,14 +136,9 @@ if ! cd $DIRECTORY; then
   exit
 fi
 
-if ! rm -fr ${PROGRAM}-${DIRECTORY_VERSION}; then
-  echo "Removing source directory for ${PROGRAM}-${DIRECTORY_VERSION} failed."
+if ! rm -fr wsjt-${PROGRAM}; then
+  echo "Removing source directory wsjt-${PROGRAM} failed."
   exit
 fi
 
-if ! rm ${PROGRAM}-${DOWNLOAD_VERSION}.tgz; then
-  echo "Removing download archive for ${PROGRAM}-${DOWNLOAD_VERSION}.tgz failed."
-  exit
-fi
-
-echo "Upgrade of ${PROGRAM}_${DOWNLOAD_VERSION} completed successfully."
+echo "Upgrade of ${PROGRAM} completed successfully."
