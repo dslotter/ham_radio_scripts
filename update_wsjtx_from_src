@@ -106,7 +106,7 @@ if ! cd build; then
   exit
 fi
 
-if ! cmake -DWSJT_SKIP_MANPAGES=ON -DWSJT_GENERATE_DOCS=OFF ..; then
+if ! cmake -prefix=/usr -DWSJT_SKIP_MANPAGES=ON -DWSJT_GENERATE_DOCS=OFF ..; then
   echo "Generate cmake makefiles failed."
   exit
 fi
@@ -121,12 +121,12 @@ if ! sudo cmake --build . --target install ; then
   exit
 fi
 
-if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/local/share/applications/wsjtx.desktop; then
+if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/share/applications/wsjtx.desktop; then
   echo "sed failed to fix wsjtx.desktop."
   exit
 fi
 
-if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/local/share/applications/message_aggregator.desktop; then
+if ! sudo sed -i 's/^Categories=AudioVideo;Audio;HamRadio;/Categories=HamRadio Weak Signal/g' /usr/share/applications/message_aggregator.desktop; then
   echo "sed failed to fix .message_aggregator.desktop."
   exit
 fi
