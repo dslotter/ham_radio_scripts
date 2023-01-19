@@ -106,7 +106,7 @@ if ! cd build; then
   exit
 fi
 
-if ! cmake -prefix=/usr -DWSJT_SKIP_MANPAGES=ON -DWSJT_GENERATE_DOCS=OFF ..; then
+if ! cmake --install-prefix=/usr -DWSJT_SKIP_MANPAGES=ON -DWSJT_GENERATE_DOCS=OFF ..; then
   echo "Generate cmake makefiles failed."
   exit
 fi
