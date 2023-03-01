@@ -10,6 +10,7 @@ Created  February 21, 2021 - Copyrighted under the GPL v3
 Modified February 28, 2021 - Enhanced session and error handling (1.0.1)
 Modified February 28, 2021 - Added support for callook.info (1.1)
 Modified March     6, 2021 - Minor fixes (1.1.1)
+Modified March     1, 2023 - Add Prop Mode field
 """
 
 import argparse
@@ -78,6 +79,7 @@ class UpdateWsjtxLog:
     grid_r = ""
     grid_s = ""
     comment = ""
+    prop_mode = ""
     adif_log_entry = ""
 
     def __init__(self, data_source):
@@ -105,6 +107,7 @@ class UpdateWsjtxLog:
         self.grid_r = ""
         self.grid_s = ""
         self.comment = ""
+        self.prop_mode = ""
 
     def parse_adif(self):
         """ Parse ADIF record """
@@ -116,7 +119,7 @@ class UpdateWsjtxLog:
                 'call', 'gridsquare', 'mode', 'submode', 'rst_sent',
                 'rst_rcvd', 'qso_date', 'time_on', 'qso_date_off', 'time_off',
                 'band', 'freq', 'station_callsign', 'my_gridsquare', 'tx_pwr',
-                'comment', 'name', 'operator'
+                'comment', 'name', 'operator', "prop_mode"
         ]:
             strbuf = str(self.adif_log_entry)
             search_token = "<" + token + ":"
@@ -178,6 +181,8 @@ class UpdateWsjtxLog:
                 self.name_r = attr
             elif token == 'operator':
                 self.operator = attr
+            elif token == 'prop_mode':
+                self.prop_mode = attr
 
     def update_log_entry(self):
         """ Log updated QSO """
@@ -198,6 +203,7 @@ class UpdateWsjtxLog:
 <comment:%d>%s \
 <name:%d>%s \
 <operator:%d>%s \
+<prop_mode:%d>%s \
 <app_uwl_source:%d>%s \
 <eor>\n""" % \
              (len(self.call), self.call,
@@ -217,6 +223,7 @@ class UpdateWsjtxLog:
               len(self.comment), self.comment,
               len(self.name_r), self.name_r,
               len(self.operator), self.operator,
+              len(self.prop_mode), self.prop_mode,
               len(self.data_source), self.data_source)
         else:
             new_adif_log_entry = """<call:%d>%s \
@@ -237,6 +244,7 @@ class UpdateWsjtxLog:
 <comment:%d>%s \
 <name:%d>%s \
 <operator:%d>%s \
+<prop_mode:%d>%s \
 <app_uwl_source:%d>%s \
 <eor>\n""" % \
              (len(self.call), self.call,
@@ -257,6 +265,7 @@ class UpdateWsjtxLog:
               len(self.comment), self.comment,
               len(self.name_r), self.name_r,
               len(self.operator), self.operator,
+              len(self.prop_mode), self.prop_mode,
               len(self.data_source), self.data_source)
 
         # Deferred write to prevent unwanted recursion
