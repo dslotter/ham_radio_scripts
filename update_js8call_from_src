@@ -3,7 +3,7 @@
 # Script to update JS8Call on Raspberry Pi, Ubuntu,
 # Debian, Linux Mint or Fedora
 #
-# Copyright 2020 - 2021, Dave Slotter, W3DJS
+# Copyright 2020 - 2024, Dave Slotter, W3DJS
 #
 # LICENSE REQUIREMENT: Attribution must be given the first time this
 # script is mentioned or used in your project.
@@ -74,6 +74,10 @@ elif [ $linux_distribution == 'Raspbian' ]; then
   {
     packages='build-essential cmake gfortran qttools5-dev qttools5-dev-tools qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev libusb-1.0-0-dev libudev-dev'
   }
+  elif [ $linux_version -eq 12 ]; then
+  {
+    packages='build-essential cmake gfortran qttools5-dev qttools5-dev-tools qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran4 libboost-all-dev libfftw3-dev libusb-1.0-0-dev libudev-dev'
+  }
   fi
 elif [ $linux_distribution == 'Linuxmint' ]; then
   if [ $linux_version -eq 20 ]; then
@@ -121,7 +125,7 @@ if ! cd build; then
   exit
 fi
 
-if ! cmake -DWSJT_SKIP_MANPAGES=ON ..; then
+if ! cmake --install-prefix=/usr  -DWSJT_SKIP_MANPAGES=ON ..; then
   echo "Generate cmake makefiles failed."
   exit
 fi
