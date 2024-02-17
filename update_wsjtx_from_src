@@ -3,7 +3,7 @@
 # Script to update WSJT-X on Raspberry Pi, Ubuntu,
 # Xubuntu, Debian, Linux Mint or Fedora
 #
-# Copyright 2020 - 2022, Dave Slotter, W3DJS
+# Copyright 2020 - 2024, Dave Slotter, W3DJS
 #
 
 DIRECTORY=${HOME}/hamradio
@@ -55,7 +55,7 @@ elif [ $linux_distribution == 'Raspbian' ]; then
   {
     packages='build-essential cmake gfortran libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran3 libboost-all-dev libfftw3-dev'
   }
-  elif [ $linux_version -eq 11 ]; then
+  elif [ $linux_version -gt 10 ]; then
   {
     packages='build-essential cmake gfortran qttools5-dev qttools5-dev-tools qtmultimedia5-dev libqt5multimedia5 libqt5multimedia5-plugins libqt5serialport5 libqt5serialport5-dev libgfortran4 libboost-all-dev libfftw3-dev libusb-1.0-0-dev libudev-dev libc6 libstdc++6 libgcc-s1 libqt5widgets5 libqt5network5 libqt5printsupport5 libqt5core5a libqt5sql5 libqt5sql5-sqlite libgomp1 libqt5gui5'
   }
